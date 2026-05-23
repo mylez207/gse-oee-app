@@ -1,0 +1,9 @@
+Variable,Importance,Importance (%),Cumulative (%)
+Maintenance_Errors_and_Rework,0.38927160211776485,38.93,38.93
+Maintenance_Budget,0.15094030474084572,15.09,54.02
+CMMS,0.13979368641110576,13.98,68.0
+Spare_Parts_Availability,0.11080751828968656,11.08,79.08
+Unplanned_Breakdowns,0.07605392180335797,7.61,86.69
+Technician_Competency,0.07504897304459583,7.5,94.19
+Preventive_Maintenance_Schedule,0.053486153107985775,5.35,99.54
+Maintenance_History_Records,0.004597840484657524,0.46,100.0

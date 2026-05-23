@@ -1,0 +1,51 @@
+Respondent_ID,Position,Years_of_Experience,Unplanned_Breakdowns,Preventive_Maintenance_Schedule,Spare_Parts_Availability,Equipment_Performance_Rate,Minor_Stoppages_and_Idling,Mechanical_Component_Wear,Maintenance_Errors_and_Rework,Standardized_Maintenance_Procedures,Spare_Parts_Quality,CMMS,Maintenance_Budget,Technician_Competency,Reliability_Centred_Maintenance,Maintenance_History_Records
+R001,Maintenance Engineer / Supervisor,More than 10 years,3,5,5,2,2,2,4,2,2,5,4,4,2,5
+R002,Quality Assurance / Inspection Officer,4 - 6 years,5,4,4,2,2,2,5,2,2,5,4,5,2,5
+R003,Ground Support Equipment Technician,1 - 3 years,4,4,4,2,2,2,4,2,2,5,4,5,2,5
+R004,Ground Support Equipment Technician,More than 10 years,5,5,5,2,2,2,5,2,2,5,4,5,2,5
+R005,Maintenance Manager,7 - 10 years,5,5,5,2,2,2,4,2,2,5,4,4,2,5
+R006,Ground Support Equipment Technician,More than 10 years,4,4,1,2,4,2,5,2,2,5,5,4,4,5
+R007,Quality Assurance / Inspection Officer,1 - 3 years,5,5,4,2,2,2,4,2,2,4,4,4,2,5
+R008,Ground Support Equipment Technician,1 - 3 years,5,5,5,2,2,2,2,2,2,2,4,4,2,5
+R009,Maintenance Engineer / Supervisor,4 - 6 years,4,4,1,2,2,2,5,2,2,5,5,5,2,5
+R010,Maintenance Engineer / Supervisor,1 - 3 years,3,5,4,2,2,2,4,2,2,5,5,5,2,5
+R011,Maintenance Manager,1 - 3 years,4,4,5,2,2,2,4,2,2,5,3,4,2,5
+R012,Ground Support Equipment Technician,4 - 6 years,4,5,5,4,2,2,5,2,2,5,5,5,2,5
+R013,Maintenance Engineer / Supervisor,7 - 10 years,5,5,5,2,2,2,5,2,2,4,5,5,2,5
+R014,Ground Support Equipment Technician,4 - 6 years,5,5,4,2,3,2,5,2,2,2,4,4,2,5
+R015,Maintenance Engineer / Supervisor,Less than 1 year,5,4,5,2,2,2,5,3,2,5,5,4,2,3
+R016,Maintenance Manager,1 - 3 years,5,5,4,2,2,2,4,2,2,5,5,4,2,5
+R017,Ground Support Equipment Technician,More than 10 years,5,4,5,2,2,3,4,2,2,5,3,4,2,5
+R018,Operations / Ramp Supervisor,7 - 10 years,4,4,5,2,2,2,4,2,2,5,4,4,3,5
+R019,Maintenance Engineer / Supervisor,1 - 3 years,5,3,5,2,2,2,5,2,4,5,5,4,2,5
+R020,Maintenance Manager,4 - 6 years,5,5,5,2,2,2,5,3,2,5,5,4,2,5
+R021,Ground Support Equipment Technician,4 - 6 years,5,5,5,2,2,2,5,2,2,5,4,4,2,5
+R022,Ground Support Equipment Technician,More than 10 years,5,2,5,2,2,2,5,3,2,5,4,5,2,5
+R023,Ground Support Equipment Technician,7 - 10 years,4,5,4,2,2,2,4,2,3,5,4,4,2,5
+R024,Maintenance Engineer / Supervisor,4 - 6 years,4,4,5,2,2,2,4,2,2,5,5,5,2,5
+R025,Maintenance Engineer / Supervisor,1 - 3 years,4,5,4,2,3,2,3,2,2,5,5,4,2,5
+R026,Operations / Ramp Supervisor,7 - 10 years,5,4,4,2,2,2,5,5,2,5,4,5,2,5
+R027,Operations / Ramp Supervisor,More than 10 years,5,5,5,2,2,2,4,2,2,4,5,4,2,5
+R028,Maintenance Engineer / Supervisor,More than 10 years,5,4,5,2,2,2,5,2,2,5,5,4,2,5
+R029,Ground Support Equipment Technician,1 - 3 years,1,5,5,2,2,2,4,3,2,5,3,5,2,5
+R030,Ground Support Equipment Technician,4 - 6 years,5,4,5,2,2,2,4,2,2,5,4,5,2,5
+R031,Maintenance Engineer / Supervisor,1 - 3 years,5,4,5,2,2,2,4,2,2,5,5,5,2,5
+R032,Quality Assurance / Inspection Officer,4 - 6 years,4,4,5,2,2,2,5,2,5,5,5,4,2,5
+R033,Ground Support Equipment Technician,4 - 6 years,4,5,5,2,2,2,5,2,5,5,5,4,2,5
+R034,Ground Support Equipment Technician,7 - 10 years,5,5,5,2,2,2,4,2,2,5,5,5,2,5
+R035,Ground Support Equipment Technician,More than 10 years,5,4,4,2,2,2,4,2,2,5,4,5,2,5
+R036,Quality Assurance / Inspection Officer,1 - 3 years,4,5,5,2,2,2,5,2,2,5,5,5,2,5
+R037,Ground Support Equipment Technician,7 - 10 years,5,5,5,2,2,2,3,2,2,3,5,5,2,5
+R038,Quality Assurance / Inspection Officer,7 - 10 years,5,5,2,2,2,2,5,2,2,4,4,4,2,5
+R039,Quality Assurance / Inspection Officer,Less than 1 year,5,5,5,2,2,2,5,2,2,4,4,5,2,5
+R040,Maintenance Engineer / Supervisor,1 - 3 years,5,4,4,2,2,2,4,2,2,4,4,4,2,5
+R041,Operations / Ramp Supervisor,7 - 10 years,5,4,5,2,2,5,4,2,2,4,2,4,2,5
+R042,Maintenance Engineer / Supervisor,Less than 1 year,4,5,5,2,2,2,5,2,2,5,4,4,2,5
+R043,Maintenance Engineer / Supervisor,4 - 6 years,5,5,5,2,2,2,4,2,2,5,4,5,2,5
+R044,Quality Assurance / Inspection Officer,7 - 10 years,4,5,5,2,2,2,4,2,2,5,4,4,2,5
+R045,Operations / Ramp Supervisor,4 - 6 years,4,4,2,2,2,2,5,2,2,5,4,4,2,2
+R046,Ground Support Equipment Technician,7 - 10 years,3,4,5,2,2,2,5,2,2,5,5,5,2,5
+R047,Quality Assurance / Inspection Officer,4 - 6 years,5,5,5,2,2,2,5,2,2,5,5,4,2,5
+R048,Quality Assurance / Inspection Officer,4 - 6 years,5,5,5,2,2,2,5,2,2,4,5,5,2,5
+R049,Maintenance Engineer / Supervisor,4 - 6 years,3,5,5,2,2,2,4,4,2,5,5,4,2,5
+R050,Ground Support Equipment Technician,1 - 3 years,4,5,5,2,2,2,4,4,2,3,5,5,2,5

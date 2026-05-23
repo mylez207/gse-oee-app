@@ -1,0 +1,44 @@
+{
+    "model_name": "GSE OEE Random Forest Regressor",
+    "version": "1.0.0",
+    "trained_on": "2026-05-22 06:28:57",
+    "author": "Aura Deonatus Nyamwelo",
+    "institution": "Dar es Salaam Institute of Technology",
+    "dataset": "GSE_OEE_Likert_Dataset.csv",
+    "n_samples": 50,
+    "n_features": 8,
+    "feature_names": [
+        "Unplanned_Breakdowns",
+        "Preventive_Maintenance_Schedule",
+        "Spare_Parts_Availability",
+        "Maintenance_Errors_and_Rework",
+        "CMMS",
+        "Maintenance_Budget",
+        "Technician_Competency",
+        "Maintenance_History_Records"
+    ],
+    "target_variable": "OEE_Score (%)",
+    "model_hyperparameters": {
+        "n_estimators": 300,
+        "max_depth": 6,
+        "min_samples_split": 3,
+        "min_samples_leaf": 2,
+        "max_features": "sqrt",
+        "random_state": 42,
+        "bootstrap": true
+    },
+    "performance_metrics": {
+        "train_R2": 0.7886,
+        "test_R2": 0.8256,
+        "test_RMSE": 4.9316,
+        "test_MAE": 4.3841,
+        "test_MAPE": 5.7222,
+        "cv_mean_R2": 0.5361,
+        "cv_std_R2": 0.1802,
+        "oob_score": 0.5676
+    },
+    "oee_benchmark": {
+        "world_class": 80.0,
+        "estimated_current_atcl": 72.56
+    }
+}
