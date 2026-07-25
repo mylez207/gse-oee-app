@@ -13,7 +13,7 @@ import joblib
 import json
 import sqlite3
 import os
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from fpdf import FPDF
 import io
 import hashlib
@@ -72,6 +72,17 @@ st.markdown("""
     .gold-card h3 { font-size:26px; margin:0; font-weight:700; }
     .gold-card p  { font-size:13px; margin:4px 0 0 0; opacity:0.9; }
 
+    .red-card {
+        background: linear-gradient(135deg, #c0392b, #e74c3c);
+        border-radius: 12px;
+        padding: 18px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(192,57,43,0.3);
+    }
+    .red-card h3 { font-size:26px; margin:0; font-weight:700; }
+    .red-card p  { font-size:13px; margin:4px 0 0 0; opacity:0.9; }
+
     .section-header {
         background: #003580;
         color: white;
@@ -87,6 +98,16 @@ st.markdown("""
     .badge-moderate { background:#e67e22; color:white; padding:5px 14px; border-radius:20px; font-size:13px; font-weight:600; }
     .badge-good     { background:#2980b9; color:white; padding:5px 14px; border-radius:20px; font-size:13px; font-weight:600; }
     .badge-verygood { background:#1a7a1a; color:white; padding:5px 14px; border-radius:20px; font-size:13px; font-weight:600; }
+
+    .badge-critical { background:#7b0000; color:white; padding:3px 10px; border-radius:14px; font-size:11px; font-weight:600; }
+    .badge-high     { background:#c0392b; color:white; padding:3px 10px; border-radius:14px; font-size:11px; font-weight:600; }
+    .badge-medium   { background:#e67e22; color:white; padding:3px 10px; border-radius:14px; font-size:11px; font-weight:600; }
+    .badge-low      { background:#2980b9; color:white; padding:3px 10px; border-radius:14px; font-size:11px; font-weight:600; }
+
+    .badge-open        { background:#c0392b; color:white; padding:3px 10px; border-radius:14px; font-size:11px; font-weight:600; }
+    .badge-inprogress  { background:#e67e22; color:white; padding:3px 10px; border-radius:14px; font-size:11px; font-weight:600; }
+    .badge-completed   { background:#1a7a1a; color:white; padding:3px 10px; border-radius:14px; font-size:11px; font-weight:600; }
+    .badge-onhold      { background:#7f8c8d; color:white; padding:3px 10px; border-radius:14px; font-size:11px; font-weight:600; }
 
     .stButton > button {
         background: linear-gradient(90deg, #003580, #0055b3);
@@ -109,6 +130,36 @@ st.markdown("""
         padding: 12px 16px;
         border-radius: 0 8px 8px 0;
         margin: 10px 0;
+        font-size: 14px;
+        color: #1a1a2e;
+    }
+
+    .alert-box {
+        background: #fdecea;
+        border-left: 4px solid #c0392b;
+        padding: 12px 16px;
+        border-radius: 0 8px 8px 0;
+        margin: 8px 0;
+        font-size: 14px;
+        color: #1a1a2e;
+    }
+
+    .warn-box {
+        background: #fff6e5;
+        border-left: 4px solid #e67e22;
+        padding: 12px 16px;
+        border-radius: 0 8px 8px 0;
+        margin: 8px 0;
+        font-size: 14px;
+        color: #1a1a2e;
+    }
+
+    .ok-box {
+        background: #eaf7ea;
+        border-left: 4px solid #1a7a1a;
+        padding: 12px 16px;
+        border-radius: 0 8px 8px 0;
+        margin: 8px 0;
         font-size: 14px;
         color: #1a1a2e;
     }
@@ -145,7 +196,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# OEE CALIBRATION
+# OEE CALIBRATION  (unchanged from original system)
 # ─────────────────────────────────────────────
 OEE_BANDS = {
     1: (0,  20,  "Very Poor"),
@@ -227,23 +278,40 @@ USERS = {
     },
 }
 
+# Pages available per role (Trend Analysis & Admin Dashboard removed)
 ROLE_PAGES = {
     "admin": [
         "Home",
         "OEE Prediction",
-        "Trend Analysis",
+        "Objective OEE Calculator",
+        "Asset Registry",
+        "Spare Parts Inventory",
+        "Work Orders",
+        "Failure Log (RCA/FMEA)",
+        "PM Scheduler",
         "Bulk CSV Upload",
-        "Admin Dashboard",
+        "Alerts & Notifications",
     ],
     "manager": [
         "Home",
         "OEE Prediction",
-        "Trend Analysis",
+        "Objective OEE Calculator",
+        "Asset Registry",
+        "Spare Parts Inventory",
+        "Work Orders",
+        "Failure Log (RCA/FMEA)",
+        "PM Scheduler",
         "Bulk CSV Upload",
+        "Alerts & Notifications",
     ],
     "technician": [
         "Home",
         "OEE Prediction",
+        "Objective OEE Calculator",
+        "Work Orders",
+        "Failure Log (RCA/FMEA)",
+        "PM Scheduler",
+        "Alerts & Notifications",
     ],
 }
 
@@ -269,7 +337,7 @@ def init_session():
         st.session_state['username']      = None
 
 # ─────────────────────────────────────────────
-# LOGIN PAGE — UPDATED WITH LOGO
+# LOGIN PAGE
 # ─────────────────────────────────────────────
 def show_login_page():
 
@@ -277,7 +345,6 @@ def show_login_page():
 
     with col_center:
 
-        # Air Tanzania logo above the login box
         if os.path.exists('atcl_logo.png'):
             st.image('atcl_logo.png', use_container_width=True)
         else:
@@ -287,7 +354,6 @@ def show_login_page():
             </div>
             """, unsafe_allow_html=True)
 
-        # Login card with blue/gold header
         st.markdown("""
         <div style='background:white; border-radius:16px;
                     box-shadow:0 8px 32px rgba(0,53,128,0.15);
@@ -308,7 +374,6 @@ def show_login_page():
         </div>
         """, unsafe_allow_html=True)
 
-        # Login form
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
             "<h4 style='color:#003580; margin:0 0 12px 0;'>Sign In</h4>",
@@ -387,6 +452,13 @@ GSE_TYPES = [
     "Service Vehicle",
 ]
 
+ASSET_STATUSES   = ["Active", "Under Maintenance", "Standby", "Retired"]
+WO_TASK_TYPES    = ["Preventive", "Corrective", "Predictive", "Inspection"]
+WO_PRIORITIES    = ["Low", "Medium", "High", "Critical"]
+WO_STATUSES      = ["Open", "In Progress", "Completed", "On Hold"]
+PM_FREQUENCIES   = ["Daily", "Weekly", "Monthly", "Quarterly", "Annually"]
+SEVERITY_LEVELS  = ["Low", "Medium", "High", "Critical"]
+
 LANGUAGES = {
     "English": {
         "predict_btn":    "Predict OEE",
@@ -427,9 +499,16 @@ RECOMMENDATIONS_SW = {
 # ─────────────────────────────────────────────
 # DATABASE
 # ─────────────────────────────────────────────
+DB_FILE = 'oee_predictions.db'
+
+def get_conn():
+    return sqlite3.connect(DB_FILE)
+
 def init_db():
-    conn = sqlite3.connect('oee_predictions.db')
+    conn = get_conn()
     c = conn.cursor()
+
+    # OEE (regression/RF model) prediction records
     c.execute('''
         CREATE TABLE IF NOT EXISTS predictions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -437,6 +516,7 @@ def init_db():
             username TEXT,
             role TEXT,
             gse_type TEXT,
+            asset_code TEXT,
             unplanned_breakdowns INTEGER,
             preventive_maintenance INTEGER,
             spare_parts INTEGER,
@@ -454,27 +534,152 @@ def init_db():
             language TEXT
         )
     ''')
+
+    # 1. Asset / Equipment Registry
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS assets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            asset_code TEXT UNIQUE,
+            gse_type TEXT,
+            model_serial TEXT,
+            location TEXT,
+            commission_date TEXT,
+            status TEXT,
+            created_by TEXT,
+            last_updated TEXT
+        )
+    ''')
+
+    # 2. Spare Parts Inventory
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS spare_parts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            part_code TEXT UNIQUE,
+            part_name TEXT,
+            category TEXT,
+            quantity_in_stock INTEGER,
+            minimum_stock_level INTEGER,
+            reorder_point INTEGER,
+            unit_cost REAL,
+            supplier TEXT,
+            lead_time_days INTEGER,
+            last_restocked TEXT
+        )
+    ''')
+
+    # 3. Work Orders
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS work_orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            wo_number TEXT,
+            asset_code TEXT,
+            title TEXT,
+            description TEXT,
+            task_type TEXT,
+            priority TEXT,
+            assigned_to TEXT,
+            status TEXT,
+            created_date TEXT,
+            due_date TEXT,
+            completed_date TEXT
+        )
+    ''')
+
+    # 4. Failure Logs / RCA-FMEA
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS failure_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            asset_code TEXT,
+            failure_date TEXT,
+            failure_mode TEXT,
+            root_cause TEXT,
+            failure_effect TEXT,
+            severity TEXT,
+            downtime_hours REAL,
+            corrective_action TEXT,
+            reported_by TEXT
+        )
+    ''')
+
+    # 5. Preventive Maintenance Scheduler
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS pm_schedule (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            asset_code TEXT,
+            task_name TEXT,
+            frequency TEXT,
+            last_done_date TEXT,
+            next_due_date TEXT,
+            status TEXT,
+            times_completed INTEGER,
+            times_overdue INTEGER
+        )
+    ''')
+
+    # 6. Objective OEE (Availability x Performance x Quality)
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS objective_oee (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            asset_code TEXT,
+            operating_time REAL,
+            planned_time REAL,
+            ideal_rate REAL,
+            actual_output REAL,
+            total_ops REAL,
+            good_ops REAL,
+            availability REAL,
+            performance REAL,
+            quality REAL,
+            oee REAL,
+            username TEXT
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
-def save_prediction(username, role, gse_type, scores,
+# ─────────────────────────────────────────────
+# DATABASE MIGRATION (safe, non-destructive)
+# Ensures old databases created with the previous
+# version of the app get any new columns added,
+# without deleting existing records.
+# ─────────────────────────────────────────────
+def migrate_db():
+    conn = get_conn()
+    c = conn.cursor()
+
+    def add_column_if_missing(table, column, col_type):
+        c.execute(f"PRAGMA table_info({table})")
+        existing_cols = [row[1] for row in c.fetchall()]
+        if column not in existing_cols:
+            c.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+
+    # predictions table may be missing asset_code from older app versions
+    add_column_if_missing("predictions", "asset_code", "TEXT")
+
+    conn.commit()
+    conn.close()
+
+# ---- Predictions ----
+def save_prediction(username, role, gse_type, asset_code, scores,
                     mean_score, oee, band_min, band_max,
                     status, impl_label, lang):
-    conn = sqlite3.connect('oee_predictions.db')
+    conn = get_conn()
     c = conn.cursor()
     c.execute('''
         INSERT INTO predictions (
-            timestamp, username, role, gse_type,
+            timestamp, username, role, gse_type, asset_code,
             unplanned_breakdowns, preventive_maintenance,
             spare_parts, maintenance_errors, cmms,
             maintenance_budget, technician_competency,
             history_records, mean_score, predicted_oee,
             oee_band_min, oee_band_max, status,
             implementation_label, language
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ''', (
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        username, role, gse_type,
+        username, role, gse_type, asset_code,
         scores['Unplanned_Breakdowns'],
         scores['Preventive_Maintenance_Schedule'],
         scores['Spare_Parts_Availability'],
@@ -492,15 +697,223 @@ def save_prediction(username, role, gse_type, scores,
     conn.close()
 
 def load_predictions():
-    conn = sqlite3.connect('oee_predictions.db')
+    conn = get_conn()
     df = pd.read_sql_query(
         "SELECT * FROM predictions ORDER BY timestamp DESC", conn
     )
     conn.close()
     return df
 
+# ---- Assets ----
+def add_asset(asset_code, gse_type, model_serial, location,
+             commission_date, status, created_by):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO assets (asset_code, gse_type, model_serial, location,
+                            commission_date, status, created_by, last_updated)
+        VALUES (?,?,?,?,?,?,?,?)
+    ''', (asset_code, gse_type, model_serial, location,
+          str(commission_date), status, created_by,
+          datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    conn.commit()
+    conn.close()
+
+def get_assets():
+    conn = get_conn()
+    df = pd.read_sql_query("SELECT * FROM assets ORDER BY id DESC", conn)
+    conn.close()
+    return df
+
+def update_asset_status(asset_code, new_status):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute('''UPDATE assets SET status=?, last_updated=? WHERE asset_code=?''',
+              (new_status, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), asset_code))
+    conn.commit()
+    conn.close()
+
+def delete_asset(asset_code):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute('DELETE FROM assets WHERE asset_code=?', (asset_code,))
+    conn.commit()
+    conn.close()
+
+# ---- Spare Parts ----
+def add_spare_part(part_code, part_name, category, qty, min_stock,
+                   reorder_point, unit_cost, supplier, lead_time):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO spare_parts (part_code, part_name, category,
+                                 quantity_in_stock, minimum_stock_level,
+                                 reorder_point, unit_cost, supplier,
+                                 lead_time_days, last_restocked)
+        VALUES (?,?,?,?,?,?,?,?,?,?)
+    ''', (part_code, part_name, category, qty, min_stock, reorder_point,
+          unit_cost, supplier, lead_time,
+          datetime.now().strftime("%Y-%m-%d")))
+    conn.commit()
+    conn.close()
+
+def get_spare_parts():
+    conn = get_conn()
+    df = pd.read_sql_query("SELECT * FROM spare_parts ORDER BY id DESC", conn)
+    conn.close()
+    return df
+
+def update_spare_part_stock(part_code, new_qty):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute('''UPDATE spare_parts SET quantity_in_stock=?, last_restocked=?
+                WHERE part_code=?''',
+              (new_qty, datetime.now().strftime("%Y-%m-%d"), part_code))
+    conn.commit()
+    conn.close()
+
+def delete_spare_part(part_code):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute('DELETE FROM spare_parts WHERE part_code=?', (part_code,))
+    conn.commit()
+    conn.close()
+
+# ---- Work Orders ----
+def add_work_order(asset_code, title, description, task_type, priority,
+                   assigned_to, due_date):
+    conn = get_conn()
+    c = conn.cursor()
+    wo_number = "WO-" + datetime.now().strftime("%Y%m%d%H%M%S")
+    c.execute('''
+        INSERT INTO work_orders (wo_number, asset_code, title, description,
+                                 task_type, priority, assigned_to, status,
+                                 created_date, due_date, completed_date)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+    ''', (wo_number, asset_code, title, description, task_type, priority,
+          assigned_to, "Open", datetime.now().strftime("%Y-%m-%d"),
+          str(due_date), None))
+    conn.commit()
+    conn.close()
+    return wo_number
+
+def get_work_orders():
+    conn = get_conn()
+    df = pd.read_sql_query("SELECT * FROM work_orders ORDER BY id DESC", conn)
+    conn.close()
+    return df
+
+def update_work_order_status(wo_number, new_status):
+    conn = get_conn()
+    c = conn.cursor()
+    completed_date = (datetime.now().strftime("%Y-%m-%d")
+                      if new_status == "Completed" else None)
+    c.execute('''UPDATE work_orders SET status=?, completed_date=?
+                WHERE wo_number=?''', (new_status, completed_date, wo_number))
+    conn.commit()
+    conn.close()
+
+# ---- Failure Logs (RCA / FMEA) ----
+def add_failure_log(asset_code, failure_date, failure_mode, root_cause,
+                    failure_effect, severity, downtime_hours,
+                    corrective_action, reported_by):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO failure_logs (asset_code, failure_date, failure_mode,
+                                  root_cause, failure_effect, severity,
+                                  downtime_hours, corrective_action, reported_by)
+        VALUES (?,?,?,?,?,?,?,?,?)
+    ''', (asset_code, str(failure_date), failure_mode, root_cause,
+          failure_effect, severity, downtime_hours, corrective_action,
+          reported_by))
+    conn.commit()
+    conn.close()
+
+def get_failure_logs():
+    conn = get_conn()
+    df = pd.read_sql_query("SELECT * FROM failure_logs ORDER BY id DESC", conn)
+    conn.close()
+    return df
+
+# ---- PM Scheduler ----
+def compute_next_due(frequency, from_date):
+    days_map = {
+        "Daily": 1, "Weekly": 7, "Monthly": 30,
+        "Quarterly": 90, "Annually": 365
+    }
+    return from_date + timedelta(days=days_map.get(frequency, 30))
+
+def add_pm_task(asset_code, task_name, frequency, last_done_date):
+    conn = get_conn()
+    c = conn.cursor()
+    next_due = compute_next_due(frequency, last_done_date)
+    c.execute('''
+        INSERT INTO pm_schedule (asset_code, task_name, frequency,
+                                 last_done_date, next_due_date, status,
+                                 times_completed, times_overdue)
+        VALUES (?,?,?,?,?,?,?,?)
+    ''', (asset_code, task_name, frequency, str(last_done_date),
+          str(next_due), "Scheduled", 0, 0))
+    conn.commit()
+    conn.close()
+
+def get_pm_tasks():
+    conn = get_conn()
+    df = pd.read_sql_query("SELECT * FROM pm_schedule ORDER BY id DESC", conn)
+    conn.close()
+    return df
+
+def mark_pm_completed(pm_id, frequency):
+    today = date.today()
+    next_due = compute_next_due(frequency, today)
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute('''UPDATE pm_schedule
+                SET last_done_date=?, next_due_date=?, status=?,
+                    times_completed = times_completed + 1
+                WHERE id=?''',
+              (str(today), str(next_due), "Scheduled", pm_id))
+    conn.commit()
+    conn.close()
+
+def pm_compliance_rate():
+    df = get_pm_tasks()
+    if df.empty:
+        return 0.0
+    today = date.today()
+    df['next_due_date'] = pd.to_datetime(df['next_due_date']).dt.date
+    overdue = df[df['next_due_date'] < today]
+    on_time = len(df) - len(overdue)
+    return round((on_time / len(df)) * 100, 1)
+
+# ---- Objective OEE (A x P x Q) ----
+def add_objective_oee(asset_code, operating_time, planned_time, ideal_rate,
+                      actual_output, total_ops, good_ops,
+                      availability, performance, quality, oee, username):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO objective_oee (timestamp, asset_code, operating_time,
+                                   planned_time, ideal_rate, actual_output,
+                                   total_ops, good_ops, availability,
+                                   performance, quality, oee, username)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ''', (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), asset_code,
+          operating_time, planned_time, ideal_rate, actual_output,
+          total_ops, good_ops, availability, performance, quality, oee,
+          username))
+    conn.commit()
+    conn.close()
+
+def get_objective_oee():
+    conn = get_conn()
+    df = pd.read_sql_query("SELECT * FROM objective_oee ORDER BY id DESC", conn)
+    conn.close()
+    return df
+
 # ─────────────────────────────────────────────
-# LOAD MODEL
+# LOAD MODEL  (same original model files, unchanged)
 # ─────────────────────────────────────────────
 @st.cache_resource
 def load_model():
@@ -512,7 +925,7 @@ def load_model():
     return model, features, meta, fi_df
 
 # ─────────────────────────────────────────────
-# PREDICTION WITH CALIBRATION
+# PREDICTION WITH CALIBRATION (unchanged logic)
 # ─────────────────────────────────────────────
 def predict_oee_calibrated(model, features, scores_dict):
     inp        = pd.DataFrame([scores_dict])[features]
@@ -638,7 +1051,7 @@ def priority_table(fi_df, scores_dict):
     return df_p
 
 # ─────────────────────────────────────────────
-# PDF GENERATION
+# PDF GENERATION (OEE Prediction Report)
 # ─────────────────────────────────────────────
 def generate_pdf(username, role, gse_type, scores,
                  oee, lower, upper, band_min, band_max,
@@ -646,7 +1059,6 @@ def generate_pdf(username, role, gse_type, scores,
     pdf = FPDF()
     pdf.add_page()
 
-    # Blue header
     pdf.set_fill_color(0, 53, 128)
     pdf.rect(0, 0, 210, 35, 'F')
     pdf.set_font('Helvetica', 'B', 18)
@@ -657,11 +1069,9 @@ def generate_pdf(username, role, gse_type, scores,
     pdf.set_xy(10, 20)
     pdf.cell(190, 8, 'GSE OEE Maintenance Management Report', align='C')
 
-    # Gold line
     pdf.set_fill_color(201, 151, 44)
     pdf.rect(0, 35, 210, 3, 'F')
 
-    # Metadata
     pdf.set_text_color(0, 0, 0)
     pdf.set_font('Helvetica', '', 10)
     pdf.set_xy(10, 42)
@@ -675,14 +1085,12 @@ def generate_pdf(username, role, gse_type, scores,
     pdf.cell(90, 6, 'Prepared by: Aura Deonatus Nyamwelo')
     pdf.line(10, 56, 200, 56)
 
-    # OEE result header
     pdf.set_font('Helvetica', 'B', 13)
     pdf.set_fill_color(0, 53, 128)
     pdf.set_text_color(255, 255, 255)
     pdf.set_xy(10, 60)
     pdf.cell(190, 8, ' OEE PREDICTION RESULT', fill=True)
 
-    # OEE values
     pdf.set_text_color(0, 0, 0)
     pdf.set_font('Helvetica', 'B', 24)
     pdf.set_xy(10, 72)
@@ -711,7 +1119,6 @@ def generate_pdf(username, role, gse_type, scores,
     pdf.cell(180, 6,
              'Gap to World-class (80%+): ' + str(gap_to_wc) + '%')
 
-    # Scale reference
     pdf.set_fill_color(232, 240, 254)
     pdf.set_xy(10, 98)
     pdf.set_font('Helvetica', 'B', 10)
@@ -733,9 +1140,8 @@ def generate_pdf(username, role, gse_type, scores,
         pdf.cell(50, 5, '(' + status_l + ')')
         y_s += 5
 
-    # Recommendation — strip emojis for PDF safety
     rec_clean = rec
-    for emoji in ['🔴','🟠','🟡','🔵','✅']:
+    for emoji in ['🔴', '🟠', '🟡', '🔵', '✅']:
         rec_clean = rec_clean.replace(emoji, '').strip()
 
     pdf.set_fill_color(232, 240, 254)
@@ -746,7 +1152,6 @@ def generate_pdf(username, role, gse_type, scores,
     pdf.set_xy(10, y_s + 11)
     pdf.multi_cell(190, 6, rec_clean)
 
-    # Input scores table
     y = y_s + 32
     pdf.set_font('Helvetica', 'B', 11)
     pdf.set_fill_color(0, 53, 128)
@@ -774,7 +1179,6 @@ def generate_pdf(username, role, gse_type, scores,
         pdf.cell(35,  6, b_label,  fill=True, border=1, align='C')
         y += 6
 
-    # Priority table
     y += 5
     if y > 240:
         pdf.add_page()
@@ -806,7 +1210,6 @@ def generate_pdf(username, role, gse_type, scores,
         pdf.cell(35,  6, str(row['Importance (%)']) + '%', border=1, align='C')
         pdf.cell(35,  6, str(row['Gap']),                  border=1, align='C')
 
-    # Footer
     pdf.set_fill_color(0, 53, 128)
     pdf.rect(0, 282, 210, 15, 'F')
     pdf.set_text_color(255, 255, 255)
@@ -820,11 +1223,48 @@ def generate_pdf(username, role, gse_type, scores,
     return pdf.output()
 
 # ─────────────────────────────────────────────
+# ALERT HELPERS
+# ─────────────────────────────────────────────
+def get_alerts():
+    """Aggregate all system alerts: overdue PM, low stock, overdue WOs, low OEE."""
+    alerts = {"overdue_pm": pd.DataFrame(), "low_stock": pd.DataFrame(),
+              "overdue_wo": pd.DataFrame(), "low_oee": pd.DataFrame()}
+    today = date.today()
+
+    pm_df = get_pm_tasks()
+    if not pm_df.empty:
+        pm_df['next_due_date'] = pd.to_datetime(pm_df['next_due_date']).dt.date
+        alerts["overdue_pm"] = pm_df[pm_df['next_due_date'] < today]
+
+    sp_df = get_spare_parts()
+    if not sp_df.empty:
+        alerts["low_stock"] = sp_df[
+            sp_df['quantity_in_stock'] <= sp_df['reorder_point']
+        ]
+
+    wo_df = get_work_orders()
+    if not wo_df.empty:
+        wo_df['due_date_parsed'] = pd.to_datetime(
+            wo_df['due_date'], errors='coerce'
+        ).dt.date
+        alerts["overdue_wo"] = wo_df[
+            (wo_df['due_date_parsed'] < today) &
+            (wo_df['status'] != 'Completed')
+        ]
+
+    pred_df = load_predictions()
+    if not pred_df.empty:
+        alerts["low_oee"] = pred_df[pred_df['predicted_oee'] < 40].head(10)
+
+    return alerts
+
+# ─────────────────────────────────────────────
 # MAIN APPLICATION
 # ─────────────────────────────────────────────
 def main():
     init_session()
     init_db()
+    migrate_db()          # ensures old databases get any new columns safely
 
     if not st.session_state['authenticated']:
         show_login_page()
@@ -905,6 +1345,18 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
+    # Quick alert banner (visible on every page)
+    alerts = get_alerts()
+    total_alerts = (len(alerts["overdue_pm"]) + len(alerts["low_stock"]) +
+                    len(alerts["overdue_wo"]) + len(alerts["low_oee"]))
+    if total_alerts > 0:
+        st.markdown(
+            "<div class='alert-box'>⚠ <b>" + str(total_alerts) +
+            " active alert(s)</b> require attention. "
+            "See <b>Alerts &amp; Notifications</b> for details.</div>",
+            unsafe_allow_html=True
+        )
+
     # ════════════════════════════════════════
     # PAGE: HOME
     # ════════════════════════════════════════
@@ -927,9 +1379,9 @@ def main():
                 <h3>{gap}%</h3><p>OEE Gap to World-class</p>
             </div>""", unsafe_allow_html=True)
         with col4:
-            st.markdown(f"""<div class="metric-card">
-                <h3>{meta['n_features']}</h3>
-                <p>Significant Maintenance Factors</p>
+            st.markdown(f"""<div class="red-card">
+                <h3>{total_alerts}</h3>
+                <p>Active System Alerts</p>
             </div>""", unsafe_allow_html=True)
 
         st.markdown("---")
@@ -950,13 +1402,17 @@ def main():
             </div>
             """, unsafe_allow_html=True)
             st.markdown("""
-            **System Capabilities:**
-            - Predict OEE from 8 key maintenance factors
-            - Track OEE trends over time
-            - Batch-process multiple GSE assessments
-            - Generate downloadable PDF maintenance reports
-            - Available in English and Kiswahili
-            - Role-based access control
+            **System Modules:**
+            - OEE Prediction (8-factor Random Forest model)
+            - Objective OEE Calculator (Availability x Performance x Quality)
+            - Asset / Equipment Registry
+            - Spare Parts Inventory Management
+            - Work Order Management
+            - Failure Log & RCA / FMEA
+            - Preventive Maintenance Scheduler
+            - Bulk CSV Upload for fleet-wide assessment
+            - Alerts & Notifications
+            - Available in English and Kiswahili, with role-based access
             """)
 
         with col_b:
@@ -986,8 +1442,14 @@ def main():
             st.markdown("<br>", unsafe_allow_html=True)
             st.latex(r"OEE = Availability \times Performance \times Quality")
 
+            pm_rate = pm_compliance_rate()
+            st.markdown(
+                "<div class='info-box'><b>Current PM Compliance Rate:</b> " +
+                str(pm_rate) + "%</div>", unsafe_allow_html=True
+            )
+
     # ════════════════════════════════════════
-    # PAGE: OEE PREDICTION
+    # PAGE: OEE PREDICTION (horizontal, manual entry)
     # ════════════════════════════════════════
     elif page == "OEE Prediction":
         st.markdown(
@@ -1009,45 +1471,78 @@ def main():
             Mixed scores produce OEE in the band corresponding to their mean.
             """)
 
-        col_inp, col_out = st.columns([1, 1.2])
-
-        with col_inp:
+        col_gse, col_asset = st.columns(2)
+        with col_gse:
             gse_type = st.selectbox(L['select_gse'], GSE_TYPES)
-            st.markdown(
-                "**" + L['current_scores'] + "**"
-                " *(1 = Strongly Disagree, 5 = Strongly Agree)*"
+        with col_asset:
+            asset_df = get_assets()
+            asset_options = ["Not Linked / Unknown"] + (
+                asset_df['asset_code'].tolist() if not asset_df.empty else []
             )
-            scores = {}
-            for col, label in FEATURE_LABELS.items():
-                scores[col] = st.slider(label, 1, 5, 3, key="pred_" + col)
+            asset_code = st.selectbox("Link to Registered Asset (optional)",
+                                      asset_options)
 
-            mean_display = round(np.mean(list(scores.values())), 2)
+        st.markdown(
+            "**" + L['current_scores'] + "**"
+            " *(Enter a value from 1 to 5 for each factor - "
+            "1 = Strongly Disagree, 5 = Strongly Agree)*"
+        )
+
+        # Horizontal layout: 4 factors per row, manual number entry
+        feature_items = list(FEATURE_LABELS.items())
+        scores = {}
+
+        row1 = st.columns(4)
+        for i in range(4):
+            col_key, col_label = feature_items[i]
+            with row1[i]:
+                scores[col_key] = st.number_input(
+                    col_label, min_value=1, max_value=5, value=3, step=1,
+                    key="pred_" + col_key
+                )
+
+        row2 = st.columns(4)
+        for i in range(4, 8):
+            col_key, col_label = feature_items[i]
+            with row2[i - 4]:
+                scores[col_key] = st.number_input(
+                    col_label, min_value=1, max_value=5, value=3, step=1,
+                    key="pred_" + col_key
+                )
+
+        mean_display = round(np.mean(list(scores.values())), 2)
+        col_m1, col_m2 = st.columns([3, 1])
+        with col_m1:
             st.info("Mean score: " + str(mean_display) + " / 5.00")
+        with col_m2:
             predict_clicked = st.button(
                 L['predict_btn'], use_container_width=True
             )
 
-        with col_out:
-            if predict_clicked:
-                oee, lower, upper, band_min, band_max, mean_sc = \
-                    predict_oee_calibrated(model, features, scores)
-                status     = get_oee_status(oee)
-                impl_label = get_implementation_label(oee)
-                rec        = (RECOMMENDATIONS_SW[status]
-                              if lang == "Kiswahili"
-                              else RECOMMENDATIONS[status])
+        st.markdown("---")
 
-                save_prediction(
-                    username, role, gse_type, scores,
-                    mean_sc, oee, band_min, band_max,
-                    status, impl_label, lang
-                )
+        if predict_clicked:
+            oee, lower, upper, band_min, band_max, mean_sc = \
+                predict_oee_calibrated(model, features, scores)
+            status     = get_oee_status(oee)
+            impl_label = get_implementation_label(oee)
+            rec        = (RECOMMENDATIONS_SW[status]
+                          if lang == "Kiswahili"
+                          else RECOMMENDATIONS[status])
 
+            save_prediction(
+                username, role, gse_type, asset_code, scores,
+                mean_sc, oee, band_min, band_max,
+                status, impl_label, lang
+            )
+
+            col_out1, col_out2 = st.columns([1, 1.2])
+
+            with col_out1:
                 st.plotly_chart(
                     gauge_chart(oee, lower, upper, L['oee_label']),
                     use_container_width=True
                 )
-
                 badge_map = {
                     "Very Poor": "badge-verypoor",
                     "Poor":      "badge-poor",
@@ -1060,8 +1555,8 @@ def main():
                     + impl_label + "</span></center>",
                     unsafe_allow_html=True
                 )
-                st.markdown("<br>", unsafe_allow_html=True)
 
+            with col_out2:
                 c1, c2, c3 = st.columns(3)
                 c1.metric("OEE Band",
                           str(band_min) + "% - " + str(band_max) + "%")
@@ -1100,100 +1595,516 @@ def main():
                     mime='application/pdf',
                     use_container_width=True
                 )
-            else:
-                st.markdown("""
-                <div style='text-align:center; padding:50px 20px; color:#666;'>
-                    <h3>Set maintenance scores and click Predict</h3>
-                    <p>1 = 0-20% | 2 = 20-40% | 3 = 40-60% |
-                    4 = 60-80% | 5 = 80-100%</p>
-                </div>""", unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style='text-align:center; padding:50px 20px; color:#666;'>
+                <h3>Enter maintenance scores above and click Predict OEE</h3>
+                <p>1 = 0-20% | 2 = 20-40% | 3 = 40-60% |
+                4 = 60-80% | 5 = 80-100%</p>
+            </div>""", unsafe_allow_html=True)
 
     # ════════════════════════════════════════
-    # PAGE: TREND ANALYSIS
+    # PAGE: OBJECTIVE OEE CALCULATOR (A x P x Q)
     # ════════════════════════════════════════
-    elif page == "Trend Analysis":
+    elif page == "Objective OEE Calculator":
         st.markdown(
-            '<div class="section-header">OEE Trend Analysis</div>',
+            '<div class="section-header">'
+            'Objective OEE Calculator (Availability x Performance x Quality)'
+            '</div>',
             unsafe_allow_html=True
         )
-        pred_df = load_predictions()
+        st.markdown("""<div class="info-box">
+        This module computes OEE directly from operational data (Section 2.6
+        of the model), independent of the subjective 1-5 ratings used in the
+        Prediction module. Use it to cross-validate the predicted OEE
+        against measured operational performance.
+        </div>""", unsafe_allow_html=True)
 
-        if pred_df.empty:
-            st.info(
-                "No predictions recorded yet. "
-                "Use OEE Prediction to generate records."
+        asset_df = get_assets()
+        asset_options = ["Not Linked / Unknown"] + (
+            asset_df['asset_code'].tolist() if not asset_df.empty else []
+        )
+        asset_code = st.selectbox("Select Equipment", asset_options)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Availability Inputs**")
+            operating_time = st.number_input(
+                "Operating Time (hours)", min_value=0.0, value=20.0, step=0.5
             )
-        else:
+            planned_time = st.number_input(
+                "Planned Production Time (hours)",
+                min_value=0.01, value=24.0, step=0.5
+            )
+            st.markdown("**Performance Inputs**")
+            ideal_rate = st.number_input(
+                "Ideal Rate (units/hour)", min_value=0.01, value=10.0, step=0.5
+            )
+            actual_output = st.number_input(
+                "Actual Output (units)", min_value=0.0, value=180.0, step=1.0
+            )
+        with col2:
+            st.markdown("**Quality Inputs**")
+            total_ops = st.number_input(
+                "Total Operations / Cycles", min_value=0.01, value=200.0, step=1.0
+            )
+            good_ops = st.number_input(
+                "Acceptable / Good Operations", min_value=0.0, value=190.0, step=1.0
+            )
+
+        calc_clicked = st.button(
+            "Calculate Objective OEE", use_container_width=True
+        )
+
+        if calc_clicked:
+            availability = min(100.0, (operating_time / planned_time) * 100)
+            performance  = min(100.0,
+                (actual_output / (ideal_rate * operating_time)) * 100
+                if operating_time > 0 else 0
+            )
+            quality = min(100.0, (good_ops / total_ops) * 100)
+            oee_obj = round(
+                (availability / 100) * (performance / 100) *
+                (quality / 100) * 100, 2
+            )
+
+            add_objective_oee(
+                asset_code, operating_time, planned_time, ideal_rate,
+                actual_output, total_ops, good_ops,
+                round(availability, 2), round(performance, 2),
+                round(quality, 2), oee_obj, username
+            )
+
             c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Total Predictions", len(pred_df))
-            c2.metric("Mean OEE",
-                      str(round(pred_df['predicted_oee'].mean(), 2)) + "%")
-            c3.metric("Best OEE",
-                      str(round(pred_df['predicted_oee'].max(), 2)) + "%")
-            c4.metric("Latest OEE",
-                      str(round(pred_df['predicted_oee'].iloc[0], 2)) + "%")
+            c1.metric("Availability", str(round(availability, 2)) + "%")
+            c2.metric("Performance",  str(round(performance, 2)) + "%")
+            c3.metric("Quality",      str(round(quality, 2)) + "%")
+            c4.metric("Objective OEE", str(oee_obj) + "%")
 
-            pred_asc = pred_df.sort_values('timestamp')
-            fig_t = go.Figure()
-            fig_t.add_trace(go.Scatter(
-                x=pred_asc['timestamp'],
-                y=pred_asc['predicted_oee'],
-                mode='lines+markers',
-                name='OEE',
-                line=dict(color='#003580', width=2),
-                marker=dict(size=8, color='#c9972c')
-            ))
-            for y_val, lbl, color in [
-                (80, 'Very Good (80%)', 'green'),
-                (60, 'Good (60%)',      '#2980b9'),
-                (40, 'Moderate (40%)', 'orange'),
-                (20, 'Poor (20%)',     'red'),
-            ]:
-                fig_t.add_hline(
-                    y=y_val, line_dash="dash", line_color=color,
-                    annotation_text=lbl, annotation_position="right"
+            st.plotly_chart(
+                gauge_chart(oee_obj, oee_obj, oee_obj, "Measured (Objective) OEE"),
+                use_container_width=True
+            )
+
+            # Cross-check against latest prediction for this asset
+            pred_df = load_predictions()
+            if not pred_df.empty and asset_code != "Not Linked / Unknown":
+                match = pred_df[pred_df['asset_code'] == asset_code]
+                if not match.empty:
+                    latest_pred = match.iloc[0]['predicted_oee']
+                    diff = round(oee_obj - latest_pred, 2)
+                    st.markdown(
+                        "<div class='info-box'>Latest predicted OEE "
+                        "for this asset: <b>" + str(latest_pred) + "%</b> "
+                        "&nbsp;|&nbsp; Difference from measured OEE: <b>" +
+                        str(diff) + " points</b></div>",
+                        unsafe_allow_html=True
+                    )
+
+        st.markdown("---")
+        st.markdown("**Objective OEE Calculation History**")
+        obj_df = get_objective_oee()
+        if obj_df.empty:
+            st.info("No objective OEE calculations recorded yet.")
+        else:
+            st.dataframe(obj_df, use_container_width=True)
+
+    # ════════════════════════════════════════
+    # PAGE: ASSET REGISTRY
+    # ════════════════════════════════════════
+    elif page == "Asset Registry":
+        st.markdown(
+            '<div class="section-header">GSE Asset / Equipment Registry</div>',
+            unsafe_allow_html=True
+        )
+
+        with st.expander("Register New Asset", expanded=False):
+            c1, c2 = st.columns(2)
+            with c1:
+                asset_code_new = st.text_input("Asset Code (unique)",
+                                               placeholder="e.g. GPU-001")
+                gse_type_new   = st.selectbox("GSE Type", GSE_TYPES,
+                                              key="asset_gse_type")
+                model_serial   = st.text_input("Model / Serial Number")
+            with c2:
+                location_new   = st.text_input("Location / Station",
+                                               placeholder="e.g. JNIA Apron 3")
+                commission_dt  = st.date_input("Commissioning Date")
+                status_new     = st.selectbox("Status", ASSET_STATUSES)
+
+            if st.button("Add Asset to Registry"):
+                if not asset_code_new:
+                    st.error("Asset Code is required.")
+                else:
+                    try:
+                        add_asset(asset_code_new, gse_type_new, model_serial,
+                                  location_new, commission_dt, status_new,
+                                  username)
+                        st.success(
+                            "Asset " + asset_code_new + " registered successfully."
+                        )
+                        st.rerun()
+                    except sqlite3.IntegrityError:
+                        st.error("Asset code already exists.")
+
+        st.markdown("**Registered Assets**")
+        asset_df = get_assets()
+        if asset_df.empty:
+            st.info("No assets registered yet.")
+        else:
+            st.dataframe(asset_df, use_container_width=True)
+
+            st.markdown("**Update Asset Status**")
+            c1, c2, c3 = st.columns([2, 2, 1])
+            with c1:
+                sel_asset = st.selectbox(
+                    "Select Asset", asset_df['asset_code'].tolist()
                 )
-            fig_t.update_layout(
-                title='OEE Trend Over Time',
-                yaxis=dict(range=[0, 100]),
-                height=420,
-                plot_bgcolor='white',
-                paper_bgcolor='white'
-            )
-            st.plotly_chart(fig_t, use_container_width=True)
+            with c2:
+                sel_status = st.selectbox("New Status", ASSET_STATUSES)
+            with c3:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("Update Status"):
+                    update_asset_status(sel_asset, sel_status)
+                    st.success("Status updated.")
+                    st.rerun()
 
-            gse_avg = (
-                pred_df.groupby('gse_type')['predicted_oee']
-                .mean().reset_index()
-            )
-            fig_g = px.bar(
-                gse_avg, x='gse_type', y='predicted_oee',
-                title='Average OEE by GSE Type',
-                color='predicted_oee',
-                color_continuous_scale='RdYlGn',
-                range_color=[0, 100]
-            )
-            fig_g.update_layout(
-                height=350, xaxis_tickangle=-30,
-                plot_bgcolor='white', paper_bgcolor='white'
-            )
-            st.plotly_chart(fig_g, use_container_width=True)
+            if role in ("admin", "manager"):
+                with st.expander("Remove Asset"):
+                    del_asset = st.selectbox(
+                        "Select Asset to Remove",
+                        asset_df['asset_code'].tolist(), key="del_asset"
+                    )
+                    if st.button("Delete Asset", type="secondary"):
+                        delete_asset(del_asset)
+                        st.warning("Asset removed.")
+                        st.rerun()
 
-            st.markdown("**All Prediction Records**")
-            st.dataframe(pred_df, use_container_width=True)
+    # ════════════════════════════════════════
+    # PAGE: SPARE PARTS INVENTORY
+    # ════════════════════════════════════════
+    elif page == "Spare Parts Inventory":
+        st.markdown(
+            '<div class="section-header">Spare Parts Inventory Management</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown("""<div class="info-box">
+        Linked to CMMS: tracks minimum stock levels, reorder points, and
+        supplier lead times, as recommended for Spare Parts Availability
+        (Section 4.2.2.4 of the dissertation).
+        </div>""", unsafe_allow_html=True)
 
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                pred_df.to_excel(writer, index=False,
-                                 sheet_name='OEE Predictions')
-            st.download_button(
-                "Download as Excel",
-                data=output.getvalue(),
-                file_name="OEE_Trend_" +
-                           datetime.now().strftime('%Y%m%d') + ".xlsx",
-                mime='application/vnd.openxmlformats-officedocument'
-                     '.spreadsheetml.sheet'
+        with st.expander("Add New Spare Part", expanded=False):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                part_code = st.text_input("Part Code", placeholder="e.g. SP-001")
+                part_name = st.text_input("Part Name")
+                category  = st.text_input("Category",
+                                          placeholder="e.g. Hydraulic, Electrical")
+            with c2:
+                qty        = st.number_input("Quantity in Stock",
+                                             min_value=0, value=10, step=1)
+                min_stock  = st.number_input("Minimum Stock Level",
+                                             min_value=0, value=5, step=1)
+                reorder_pt = st.number_input("Reorder Point",
+                                             min_value=0, value=8, step=1)
+            with c3:
+                unit_cost  = st.number_input("Unit Cost (TZS)",
+                                             min_value=0.0, value=50000.0, step=1000.0)
+                supplier   = st.text_input("Supplier")
+                lead_time  = st.number_input("Lead Time (days)",
+                                             min_value=0, value=14, step=1)
+
+            if st.button("Add Spare Part"):
+                if not part_code or not part_name:
+                    st.error("Part Code and Part Name are required.")
+                else:
+                    try:
+                        add_spare_part(part_code, part_name, category, qty,
+                                      min_stock, reorder_pt, unit_cost,
+                                      supplier, lead_time)
+                        st.success("Spare part added successfully.")
+                        st.rerun()
+                    except sqlite3.IntegrityError:
+                        st.error("Part code already exists.")
+
+        st.markdown("**Current Inventory**")
+        sp_df = get_spare_parts()
+        if sp_df.empty:
+            st.info("No spare parts recorded yet.")
+        else:
+            def highlight_low(row):
+                if row['quantity_in_stock'] <= row['reorder_point']:
+                    return ['background-color:#fdecea'] * len(row)
+                return [''] * len(row)
+
+            st.dataframe(
+                sp_df.style.apply(highlight_low, axis=1),
+                use_container_width=True
             )
+
+            low_stock = sp_df[sp_df['quantity_in_stock'] <= sp_df['reorder_point']]
+            if not low_stock.empty:
+                st.markdown(
+                    "<div class='alert-box'>⚠ " + str(len(low_stock)) +
+                    " part(s) at or below reorder point.</div>",
+                    unsafe_allow_html=True
+                )
+
+            st.markdown("**Update Stock Quantity**")
+            c1, c2, c3 = st.columns([2, 1, 1])
+            with c1:
+                sel_part = st.selectbox(
+                    "Select Part", sp_df['part_code'].tolist()
+                )
+            with c2:
+                new_qty = st.number_input(
+                    "New Quantity", min_value=0, value=0, step=1
+                )
+            with c3:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("Update Stock"):
+                    update_spare_part_stock(sel_part, new_qty)
+                    st.success("Stock updated.")
+                    st.rerun()
+
+            if role in ("admin", "manager"):
+                with st.expander("Remove Spare Part"):
+                    del_part = st.selectbox(
+                        "Select Part to Remove",
+                        sp_df['part_code'].tolist(), key="del_part"
+                    )
+                    if st.button("Delete Part", type="secondary"):
+                        delete_spare_part(del_part)
+                        st.warning("Part removed.")
+                        st.rerun()
+
+    # ════════════════════════════════════════
+    # PAGE: WORK ORDERS
+    # ════════════════════════════════════════
+    elif page == "Work Orders":
+        st.markdown(
+            '<div class="section-header">Work Order Management</div>',
+            unsafe_allow_html=True
+        )
+
+        with st.expander("Create New Work Order", expanded=False):
+            asset_df = get_assets()
+            asset_options = (asset_df['asset_code'].tolist()
+                            if not asset_df.empty else ["No assets registered"])
+            c1, c2 = st.columns(2)
+            with c1:
+                wo_asset = st.selectbox("Equipment (Asset Code)", asset_options)
+                wo_title = st.text_input("Work Order Title")
+                wo_type  = st.selectbox("Task Type", WO_TASK_TYPES)
+            with c2:
+                wo_priority = st.selectbox("Priority", WO_PRIORITIES)
+                wo_assigned = st.text_input("Assigned To")
+                wo_due      = st.date_input("Due Date")
+            wo_desc = st.text_area("Description")
+
+            if st.button("Create Work Order"):
+                if not wo_title:
+                    st.error("Work Order Title is required.")
+                else:
+                    wo_num = add_work_order(wo_asset, wo_title, wo_desc,
+                                            wo_type, wo_priority,
+                                            wo_assigned, wo_due)
+                    st.success("Work Order " + wo_num + " created.")
+                    st.rerun()
+
+        st.markdown("**All Work Orders**")
+        wo_df = get_work_orders()
+        if wo_df.empty:
+            st.info("No work orders recorded yet.")
+        else:
+            st.dataframe(wo_df, use_container_width=True)
+
+            st.markdown("**Update Work Order Status**")
+            c1, c2, c3 = st.columns([2, 2, 1])
+            with c1:
+                sel_wo = st.selectbox(
+                    "Select Work Order", wo_df['wo_number'].tolist()
+                )
+            with c2:
+                sel_wo_status = st.selectbox("New Status", WO_STATUSES)
+            with c3:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("Update WO Status"):
+                    update_work_order_status(sel_wo, sel_wo_status)
+                    st.success("Work order status updated.")
+                    st.rerun()
+
+    # ════════════════════════════════════════
+    # PAGE: FAILURE LOG (RCA / FMEA)
+    # ════════════════════════════════════════
+    elif page == "Failure Log (RCA/FMEA)":
+        st.markdown(
+            '<div class="section-header">'
+            'Failure Log &amp; Root Cause Analysis (RCA / FMEA)</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown("""<div class="info-box">
+        Structured breakdown reporting recommended in Section 4.2.2.5 to
+        ground the Unplanned Breakdowns (UB) and Maintenance Errors and
+        Rework (MER) ratings in actual failure data.
+        </div>""", unsafe_allow_html=True)
+
+        with st.expander("Log New Failure / Breakdown", expanded=False):
+            asset_df = get_assets()
+            asset_options = (asset_df['asset_code'].tolist()
+                            if not asset_df.empty else ["No assets registered"])
+            c1, c2 = st.columns(2)
+            with c1:
+                f_asset = st.selectbox("Equipment (Asset Code)", asset_options,
+                                       key="fail_asset")
+                f_date  = st.date_input("Failure Date")
+                f_severity = st.selectbox("Severity", SEVERITY_LEVELS)
+            with c2:
+                f_downtime = st.number_input("Downtime (hours)",
+                                             min_value=0.0, value=2.0, step=0.5)
+                f_reported = st.text_input("Reported By")
+
+            f_mode   = st.text_input("Failure Mode",
+                                     placeholder="e.g. Hydraulic leak, Engine stall")
+            f_cause  = st.text_area("Root Cause (RCA)",
+                                    placeholder="Why did the failure occur?")
+            f_effect = st.text_area("Failure Effect (FMEA)",
+                                    placeholder="What was the operational impact?")
+            f_action = st.text_area("Corrective Action Taken")
+
+            if st.button("Log Failure"):
+                if not f_mode:
+                    st.error("Failure Mode is required.")
+                else:
+                    add_failure_log(f_asset, f_date, f_mode, f_cause, f_effect,
+                                    f_severity, f_downtime, f_action, f_reported)
+                    st.success("Failure logged successfully.")
+                    st.rerun()
+
+        st.markdown("**Failure History**")
+        fl_df = get_failure_logs()
+        if fl_df.empty:
+            st.info("No failures logged yet.")
+        else:
+            st.dataframe(fl_df, use_container_width=True)
+
+            c1, c2 = st.columns(2)
+            with c1:
+                sev_counts = fl_df['severity'].value_counts().reset_index()
+                sev_counts.columns = ['Severity', 'Count']
+                fig_sev = px.pie(
+                    sev_counts, values='Count', names='Severity',
+                    title='Failures by Severity',
+                    color_discrete_map={
+                        'Critical': '#7b0000', 'High': '#c0392b',
+                        'Medium': '#e67e22', 'Low': '#2980b9'
+                    }
+                )
+                st.plotly_chart(fig_sev, use_container_width=True)
+            with c2:
+                asset_counts = fl_df['asset_code'].value_counts().reset_index()
+                asset_counts.columns = ['Asset', 'Failure Count']
+                fig_asset = px.bar(
+                    asset_counts.head(10), x='Asset', y='Failure Count',
+                    title='Top Assets by Failure Frequency',
+                    color_discrete_sequence=['#003580']
+                )
+                fig_asset.update_layout(
+                    plot_bgcolor='white', paper_bgcolor='white'
+                )
+                st.plotly_chart(fig_asset, use_container_width=True)
+
+            st.metric("Total Downtime Logged",
+                      str(round(fl_df['downtime_hours'].sum(), 1)) + " hours")
+
+    # ════════════════════════════════════════
+    # PAGE: PM SCHEDULER
+    # ════════════════════════════════════════
+    elif page == "PM Scheduler":
+        st.markdown(
+            '<div class="section-header">Preventive Maintenance Scheduler</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown("""<div class="info-box">
+        Converts the Preventive Maintenance Schedule (PMS) factor from a
+        static rating into a live, trackable operational metric with
+        due-date alerts and compliance tracking.
+        </div>""", unsafe_allow_html=True)
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric("Overall PM Compliance Rate", str(pm_compliance_rate()) + "%")
+        with c2:
+            pm_df_check = get_pm_tasks()
+            overdue_ct = 0
+            if not pm_df_check.empty:
+                today = date.today()
+                pm_df_check['next_due_date'] = pd.to_datetime(
+                    pm_df_check['next_due_date']
+                ).dt.date
+                overdue_ct = len(pm_df_check[pm_df_check['next_due_date'] < today])
+            st.metric("Overdue PM Tasks", overdue_ct)
+
+        with st.expander("Schedule New PM Task", expanded=False):
+            asset_df = get_assets()
+            asset_options = (asset_df['asset_code'].tolist()
+                            if not asset_df.empty else ["No assets registered"])
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                pm_asset = st.selectbox("Equipment (Asset Code)", asset_options,
+                                        key="pm_asset")
+            with c2:
+                pm_task_name = st.text_input(
+                    "Task Name", placeholder="e.g. Oil change, Inspection"
+                )
+            with c3:
+                pm_freq = st.selectbox("Frequency", PM_FREQUENCIES)
+
+            pm_last_done = st.date_input("Last Done Date", value=date.today())
+
+            if st.button("Add PM Task"):
+                if not pm_task_name:
+                    st.error("Task Name is required.")
+                else:
+                    add_pm_task(pm_asset, pm_task_name, pm_freq, pm_last_done)
+                    st.success("PM task scheduled successfully.")
+                    st.rerun()
+
+        st.markdown("**Scheduled PM Tasks**")
+        pm_df = get_pm_tasks()
+        if pm_df.empty:
+            st.info("No PM tasks scheduled yet.")
+        else:
+            today = date.today()
+            pm_df['next_due_date'] = pd.to_datetime(pm_df['next_due_date']).dt.date
+            pm_df['Overdue'] = pm_df['next_due_date'] < today
+
+            def highlight_overdue(row):
+                if row['Overdue']:
+                    return ['background-color:#fdecea'] * len(row)
+                return [''] * len(row)
+
+            st.dataframe(
+                pm_df.style.apply(highlight_overdue, axis=1),
+                use_container_width=True
+            )
+
+            st.markdown("**Mark Task as Completed**")
+            c1, c2 = st.columns([3, 1])
+            with c1:
+                pm_options = (pm_df['task_name'] + " | " +
+                             pm_df['asset_code'] + " (ID:" +
+                             pm_df['id'].astype(str) + ")").tolist()
+                sel_pm = st.selectbox("Select PM Task", pm_options)
+                sel_pm_id = int(sel_pm.split("ID:")[1].replace(")", ""))
+            with c2:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("Mark Completed"):
+                    row_match = pm_df[pm_df['id'] == sel_pm_id].iloc[0]
+                    mark_pm_completed(sel_pm_id, row_match['frequency'])
+                    st.success("PM task marked as completed. Next due date recalculated.")
+                    st.rerun()
 
     # ════════════════════════════════════════
     # PAGE: BULK CSV UPLOAD
@@ -1276,92 +2187,84 @@ def main():
                 )
 
     # ════════════════════════════════════════
-    # PAGE: ADMIN DASHBOARD
+    # PAGE: ALERTS & NOTIFICATIONS
     # ════════════════════════════════════════
-    elif page == "Admin Dashboard":
-        if role != "admin":
-            st.markdown("""
-            <div style='text-align:center; padding:60px 20px; color:#c0392b;'>
-                <h2>Access Denied</h2>
-                <p>This page is restricted to system administrators only.</p>
-            </div>""", unsafe_allow_html=True)
-        else:
+    elif page == "Alerts & Notifications":
+        st.markdown(
+            '<div class="section-header">Alerts &amp; Notifications</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown("""<div class="info-box">
+        Consolidated real-time alerts drawn from the Spare Parts, PM
+        Scheduler, Work Order, and OEE Prediction modules, operationalising
+        the system's decision-support function.
+        </div>""", unsafe_allow_html=True)
+
+        alerts = get_alerts()
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Overdue PM Tasks", len(alerts["overdue_pm"]))
+        c2.metric("Low Stock Parts", len(alerts["low_stock"]))
+        c3.metric("Overdue Work Orders", len(alerts["overdue_wo"]))
+        c4.metric("Recent Low OEE Predictions (<40%)", len(alerts["low_oee"]))
+
+        st.markdown("---")
+
+        st.markdown("**⏰ Overdue Preventive Maintenance Tasks**")
+        if alerts["overdue_pm"].empty:
             st.markdown(
-                '<div class="section-header">'
-                'Admin Dashboard - System Monitoring</div>',
+                "<div class='ok-box'>No overdue PM tasks.</div>",
                 unsafe_allow_html=True
             )
-            pred_df = load_predictions()
-
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Total Predictions", len(pred_df))
-            c2.metric(
-                "Mean OEE",
-                str(round(pred_df['predicted_oee'].mean(), 2)) + "%"
-                if not pred_df.empty else "N/A"
-            )
-            c3.metric(
-                "Very Good Count",
-                len(pred_df[pred_df['status'] == 'Very Good'])
-                if not pred_df.empty else 0
-            )
-            c4.metric(
-                "Very Poor Count",
-                len(pred_df[pred_df['status'] == 'Very Poor'])
-                if not pred_df.empty else 0
+        else:
+            st.dataframe(
+                alerts["overdue_pm"][
+                    ['asset_code', 'task_name', 'frequency',
+                     'next_due_date', 'status']
+                ], use_container_width=True
             )
 
-            if not pred_df.empty:
-                col_a, col_b = st.columns(2)
+        st.markdown("**📦 Spare Parts Below Reorder Point**")
+        if alerts["low_stock"].empty:
+            st.markdown(
+                "<div class='ok-box'>No low-stock alerts.</div>",
+                unsafe_allow_html=True
+            )
+        else:
+            st.dataframe(
+                alerts["low_stock"][
+                    ['part_code', 'part_name', 'quantity_in_stock',
+                     'reorder_point', 'supplier', 'lead_time_days']
+                ], use_container_width=True
+            )
 
-                with col_a:
-                    sc = pred_df['status'].value_counts().reset_index()
-                    sc.columns = ['Status', 'Count']
-                    fig_s = px.pie(
-                        sc, values='Count', names='Status',
-                        title='Implementation Status Distribution',
-                        color_discrete_map={
-                            'Very Good': '#1a7a1a',
-                            'Good':      '#2980b9',
-                            'Moderate':  '#e67e22',
-                            'Poor':      '#c0392b',
-                            'Very Poor': '#7b0000'
-                        }
-                    )
-                    st.plotly_chart(fig_s, use_container_width=True)
+        st.markdown("**🛠 Overdue Work Orders**")
+        if alerts["overdue_wo"].empty:
+            st.markdown(
+                "<div class='ok-box'>No overdue work orders.</div>",
+                unsafe_allow_html=True
+            )
+        else:
+            st.dataframe(
+                alerts["overdue_wo"][
+                    ['wo_number', 'asset_code', 'title', 'priority',
+                     'assigned_to', 'due_date', 'status']
+                ], use_container_width=True
+            )
 
-                with col_b:
-                    if 'username' in pred_df.columns:
-                        uc = pred_df['username'].value_counts().reset_index()
-                        uc.columns = ['User', 'Count']
-                        fig_u = px.bar(
-                            uc, x='User', y='Count',
-                            title='Predictions by User',
-                            color_discrete_sequence=['#003580']
-                        )
-                        fig_u.update_layout(
-                            plot_bgcolor='white', paper_bgcolor='white'
-                        )
-                        st.plotly_chart(fig_u, use_container_width=True)
-
-                st.markdown("**All System Records**")
-                st.dataframe(pred_df, use_container_width=True)
-
-                st.markdown("**System Information**")
-                st.json({
-                    "model_version":   meta['version'],
-                    "trained_on":      meta['trained_on'],
-                    "author":          meta['author'],
-                    "institution":     meta['institution'],
-                    "db_file":         "oee_predictions.db",
-                    "system_time":     datetime.now().strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    ),
-                    "active_accounts": len(USERS),
-                    "total_records":   len(pred_df)
-                })
-            else:
-                st.info("No records in the database yet.")
+        st.markdown("**📉 Recent Low OEE Predictions (Below 40%)**")
+        if alerts["low_oee"].empty:
+            st.markdown(
+                "<div class='ok-box'>No recent low-OEE predictions.</div>",
+                unsafe_allow_html=True
+            )
+        else:
+            st.dataframe(
+                alerts["low_oee"][
+                    ['timestamp', 'gse_type', 'asset_code',
+                     'predicted_oee', 'status']
+                ], use_container_width=True
+            )
 
 # ─────────────────────────────────────────────
 # RUN
